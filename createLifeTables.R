@@ -79,6 +79,7 @@ range_5year <- 2002:(myYear - 2) # Used for 5-year estimates
 
 ## 1.3 Define function ---------
 
+# Cutting age into age groups
 ageChop <- function(INAGE, my_lAge, my_uAge, my_ageName) {
 
 aL       <-      my_lAge   
@@ -94,14 +95,16 @@ OUTAGE
 
 ## 2 Read in geography linkages files -----------------------------------
 
-## 2.1	load tract to MSSA maps
+## 2.1	load tract to MSSA linkage
 
-trt10mssa <- read_csv("dependencies/Tract to Community Linkage.csv") %>% 
+tractToComm <- read_csv("dependencies/Tract to Community Linkage.csv")
+
+trt10mssa <- tractToComm %>% 
   select(GEOID, comID) %>% 
   add_row(GEOID = "06037930401", comID = "78.2xx")
 
 
-## 2.2 	load county name to county FIPS code maps
+## 2.2 	load county name to county FIPS code 
 
 fipsCounty <- readxl::read_xlsx("dependencies/countyLink.xlsx") %>%
   select(county = countyName, FIPSCounty) %>% 
@@ -125,7 +128,7 @@ nxMSSA <- readRDS("dataIn/nxMSSA.RDS") %>%
     rename(Nx = nx, GEOID = comID) 
 
 
-# Grab total sex - popMSSA already has total Race
+# Grab total sex - nxMSSA already has total Race
 nxMSSA_totalSex <- nxMSSA %>%
   group_by(GEOID, year, agell, ageul, raceCode) %>%
   summarise(Nx = sum(Nx)) %>%
@@ -458,9 +461,16 @@ ltCounty_atBirth <- ltCounty %>%
   filter(x == 0) %>% 
   select(GEOID, all_of(selectCols))
 
+# MSSA info
+commInfo <- tractToComm %>% 
+  distinct(comID, comName, county)
+
 ltMSSA_atBirth <- ltMSSA %>% 
   filter(x == 0) %>% 
-  select(comID, all_of(selectCols))
+  select(comID, all_of(selectCols)) %>% 
+  left_join(commInfo)
+
+
 
 ## Save
 saveRDS(ltState_atBirth, "dataOut/e0ciState.RDS")

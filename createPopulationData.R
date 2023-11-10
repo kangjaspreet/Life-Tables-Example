@@ -145,26 +145,36 @@ nxState <- popCounty %>%
 # Notes about nxMSSA.RDS:
 # 1. 2007-2017 MSSA Pop pulled by Ethan
 # 2. 2018-2019 pulled by CCB Data Team via the tidycensus package
-# 3. 2020- data are actually 2019 ACS 5Y estimates since we have not yet switched to the new 2020 census tract boundaries
-# - Because of this, the code below simply reads in nxMSSA.RDS and uses the prior year's pop estimates (which are 2019 ACS 5Y estimates) for current year
+# 3. 2020+ data are actually 2019 ACS 5Y estimates since we have not yet switched to the new 2020 census tract boundaries
+# - Because of this, the code below reads in nxMSSA.RDS and uses 2019 ACS 5Y estimates for 2020, 2021
 
-
+# Read in MSSA-level county data
 nxMSSA <- readRDS("dataIn/nxMSSA.RDS")
 
-# Uses last year's pop estimates for current year
-t_nxMSSA <- nxMSSA %>%
-  filter(year == (myYear - 1)) %>%
-  mutate(year = myYear)
+# Check if 2020 and 2021 are in nxMSSA. If not, use 2019 ACS 5Y estimates for 2020, 2021
+checkYears <- 2020:myYear
+for (checkYear in checkYears) {
+  
+  if ( checkYear %in% unique( nxMSSA$year ) ) {
+    next()
+  } else {
+    t_nxMSSA <- nxMSSA %>% 
+      filter(year == 2019) %>% # use 2019 ACS 5Y estimates
+      mutate(year = checkYear)
+    
+    nxMSSA <- bind_rows(nxMSSA, t_nxMSSA)
+  }
+}
 
-# Bind current year to nxMSSA
-nxMSSA_final <- bind_rows(nxMSSA, t_nxMSSA)
-
+# Data Quality check - Frequency table on year - All frequencies should be the same
+dqCheck <- table(nxMSSA$year, useNA = "ifany")
+dqCheck 
 
 # 4 Save data ------------------------------------------------------------------------------------
 
 saveRDS(nxCounty, "dataIn/nxCounty.RDS")
 saveRDS(nxState, "dataIn/nxState.RDS")
-saveRDS(nxMSSA_final, "dataIn/nxMSSA.RDS")
+saveRDS(nxMSSA, "dataIn/nxMSSA.RDS")
 
 
 
